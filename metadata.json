@@ -1,0 +1,6 @@
+{
+  "name": "PEAK REAL ESTATE",
+  "description": "ระบบบริหารธุรกิจอสังหาริมทรัพย์และทีมเอเจนต์ Real Estate CRM รองรับ Administrator, Manager, Agent และ Staff",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
