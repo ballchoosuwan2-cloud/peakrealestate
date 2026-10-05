@@ -8,13 +8,13 @@ import {
   clientsTable,
   contractsTable,
   auditLogsTable,
-  DbMaintenanceVendor,
-  DbMaintenanceRequest,
-  DbMaintenanceCost,
-  DbPreventiveMaintenance,
+  type DbMaintenanceVendor,
+  type DbMaintenanceRequest,
+  type DbMaintenanceCost,
+  type DbPreventiveMaintenance,
 } from '../db/schema.ts';
 import { eq, and, desc, asc, sql, ilike, or, gte, lte } from 'drizzle-orm';
-import { User } from '../types.ts';
+import type { User } from '../types.ts';
 
 export interface MaintenanceFilterParams {
   search?: string;

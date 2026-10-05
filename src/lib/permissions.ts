@@ -1,4 +1,4 @@
-import { User, UserRole, Property } from '../types';
+import type { User, UserRole, Property } from '../types.ts';
 
 /**
  * Access Scopes:

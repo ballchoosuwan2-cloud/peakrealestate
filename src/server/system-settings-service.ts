@@ -14,9 +14,9 @@ import {
   viewingsTable,
   clientsTable,
   clientFollowUpsTable,
-  DbRole,
-  InsertDbRole,
-  DbSystemSetting,
+  type DbRole,
+  type InsertDbRole,
+  type DbSystemSetting,
 } from '../db/schema.ts';
 
 export interface OperatorContext {

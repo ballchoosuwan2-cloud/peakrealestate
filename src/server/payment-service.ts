@@ -6,12 +6,12 @@ import {
   contractsTable,
   auditLogsTable,
   propertiesTable,
-  DbPaymentSchedule,
-  InsertDbPaymentSchedule,
-  DbPaymentRecord,
-  InsertDbPaymentRecord,
+  type DbPaymentSchedule,
+  type InsertDbPaymentSchedule,
+  type DbPaymentRecord,
+  type InsertDbPaymentRecord,
 } from '../db/schema.ts';
-import { User } from '../types.ts';
+import type { User } from '../types.ts';
 
 export interface PaymentScheduleQueryParams {
   contractId?: string;

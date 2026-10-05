@@ -1,7 +1,6 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { createServer as createViteServer } from 'vite';
 import * as XLSX from 'xlsx';
 import { ensureDatabaseSchema, pool, db } from './src/db/index.ts';
 import {
@@ -24,7 +23,7 @@ import {
   createDatabaseBackup,
   listDatabaseBackups,
   restoreDatabaseBackup,
-  PropertyQueryParams,
+  type PropertyQueryParams,
   PHUKET_ZONE_MAPPING,
   generateImportHistoryCsv,
 } from './src/server/db-service.ts';
@@ -47,7 +46,7 @@ import {
   checkGranularPermission,
   ROLE_PERMISSIONS,
 } from './src/lib/permissions.ts';
-import { User, UserRole } from './src/types.ts';
+import type { User, UserRole } from './src/types.ts';
 import {
   userService,
   normalizeRole,
@@ -55,7 +54,7 @@ import {
 } from './src/server/user-service.ts';
 import {
   contractService,
-  ContractQueryParams,
+  type ContractQueryParams,
 } from './src/server/contract-service.ts';
 import { paymentService } from './src/server/payment-service.ts';
 import { viewingService } from './src/server/viewing-service.ts';
@@ -66,7 +65,7 @@ import {
 } from './src/server/system-settings-service.ts';
 import {
   reportingService,
-  ReportType,
+  type ReportType,
 } from './src/server/reporting-service.ts';
 import { maintenanceService } from './src/server/maintenance-service.ts';
 import { GENERATED_CONTRACTS_DIR } from './src/server/docx-generator.ts';
@@ -136,18 +135,37 @@ function maskOwnerContactIfNeeded(property: any, user: User): any {
 async function startServer() {
   const app = express();
   
-  // Dev server must always run on port 3000 per environment constraints (Nginx occupies 8080)
-  let PORT = 3000;
+  // Port configuration: Listen to process.env.PORT if specified (Cloud Run assigns 8080).
+  // Default to 3000 for AI Studio development server.
+  const isCloudRun = Boolean(process.env.K_SERVICE || process.env.K_REVISION);
+  const hasDist = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    isCloudRun ||
+    (hasDist && process.env.NODE_ENV !== 'development');
+
+  let PORT = Number(process.env.PORT) || 3000;
   const portArgIdx = process.argv.indexOf('--port');
   if (portArgIdx !== -1 && process.argv[portArgIdx + 1]) {
     const parsed = parseInt(process.argv[portArgIdx + 1], 10);
-    if (!isNaN(parsed) && parsed > 0 && parsed !== 8080) PORT = parsed;
+    if (!isNaN(parsed) && parsed > 0) PORT = parsed;
   } else if (process.argv[2] && !isNaN(parseInt(process.argv[2], 10))) {
     const parsed = parseInt(process.argv[2], 10);
-    if (parsed !== 8080) PORT = parsed;
+    if (!isNaN(parsed) && parsed > 0) PORT = parsed;
   }
 
   const HOST = '0.0.0.0';
+
+  // Immediate Health Check for Cloud Run / Load Balancer probes (never returns 503)
+  app.get(['/health', '/api/health', '/ping', '/api/ping'], (req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'ok',
+      service: 'PEAK REAL ESTATE',
+      ready: true,
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    });
+  });
 
   // JSON and URL-encoded body parser with high payload limit for bulk imports
   app.use(express.json({ limit: '50mb' }));
@@ -212,15 +230,17 @@ async function startServer() {
     return result;
   }
 
-  // Initialize PostgreSQL schema and ensure production clean state
-  try {
-    await ensureDatabaseSchema();
-    await authService.ensureDefaultUsersHavePassword();
-    const cleanupResult = await cleanupProductionDemoData();
-    console.log('Production clean state ready. Cleaned demo records:', cleanupResult);
-  } catch (err) {
-    console.error('Error during database initialization/cleanup:', err);
-  }
+  // Initialize PostgreSQL schema and ensure clean state in background without blocking server startup
+  (async () => {
+    try {
+      await ensureDatabaseSchema();
+      await authService.ensureDefaultUsersHavePassword();
+      const cleanupResult = await cleanupProductionDemoData();
+      console.log('Database and production state ready. Cleaned demo records:', cleanupResult);
+    } catch (err) {
+      console.error('Background database initialization warning:', err);
+    }
+  })();
 
   // -------------------------------------------------------------
   // API Routes
@@ -3415,20 +3435,37 @@ async function startServer() {
   // -------------------------------------------------------------
   // Vite Middleware (Development) / Static Files (Production)
   // -------------------------------------------------------------
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: false,
-      },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
+  if (!isProduction) {
+    try {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: {
+          middlewareMode: true,
+          hmr: false,
+        },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } catch (viteErr) {
+      console.warn('Vite middleware could not be loaded, falling back to static files:', viteErr);
+      const distPath = path.join(process.cwd(), 'dist');
+      if (fs.existsSync(distPath)) {
+        app.use(express.static(distPath));
+        app.get('*', (req: Request, res: Response) => {
+          res.sendFile(path.join(distPath, 'index.html'));
+        });
+      }
+    }
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { maxAge: '1h' }));
     app.get('*', (req: Request, res: Response) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(200).send('<!doctype html><html><head><meta http-equiv="refresh" content="3"><title>PEAK REAL ESTATE</title></head><body style="background:#0A0C10;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;"><div>Loading PEAK REAL ESTATE...</div></body></html>');
+      }
     });
   }
 

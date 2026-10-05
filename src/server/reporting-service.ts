@@ -12,7 +12,7 @@ import {
   usersTable,
   auditLogsTable,
 } from '../db/schema.ts';
-import { User } from '../types.ts';
+import type { User } from '../types.ts';
 import { checkGranularPermission } from '../lib/permissions.ts';
 
 export type ReportType =

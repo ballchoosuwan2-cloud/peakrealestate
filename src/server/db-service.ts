@@ -5,8 +5,8 @@ import {
   importHistoryTable,
   auditLogsTable,
   databaseBackupsTable,
-  DbProperty,
-  InsertDbProperty,
+  type DbProperty,
+  type InsertDbProperty,
 } from '../db/schema.ts';
 import fs from 'fs';
 import path from 'path';

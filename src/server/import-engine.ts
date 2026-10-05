@@ -12,8 +12,8 @@ import {
   propertiesTable,
   importHistoryTable,
   auditLogsTable,
-  DbProperty,
-  InsertDbProperty,
+  type DbProperty,
+  type InsertDbProperty,
 } from '../db/schema.ts';
 import { PHUKET_ZONE_MAPPING, VALID_CATEGORIES } from './db-service.ts';
 

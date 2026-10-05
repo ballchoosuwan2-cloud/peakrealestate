@@ -826,12 +826,23 @@ function initDatabase() {
       }
     })();
 
-    // Intercept client query to ensure initialization has completed before executing external queries
+    // Intercept client query and exec to ensure initialization has completed before executing external queries
     (pgliteClient as any).query = async (queryText: string, params?: any[], options?: any) => {
       if (pgliteInitPromise) {
-        await pgliteInitPromise;
+        try {
+          await pgliteInitPromise;
+        } catch {}
       }
       return originalQuery(queryText, params, options);
+    };
+
+    (pgliteClient as any).exec = async (queryText: string) => {
+      if (pgliteInitPromise) {
+        try {
+          await pgliteInitPromise;
+        } catch {}
+      }
+      return originalExec(queryText);
     };
 
     const drizzleDb = drizzlePglite(pgliteClient, { schema });

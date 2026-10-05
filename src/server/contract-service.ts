@@ -5,12 +5,12 @@ import {
   contractsTable,
   auditLogsTable,
   propertiesTable,
-  DbContract,
-  InsertDbContract,
+  type DbContract,
+  type InsertDbContract,
 } from '../db/schema.ts';
 import { generateLeaseContractDocx } from './docx-generator.ts';
 import { canUserArchiveProperty, canUserEditProperty } from '../lib/permissions.ts';
-import { User } from '../types.ts';
+import type { User } from '../types.ts';
 import { numberToThaiBaht, numberToEnglishWords } from '../lib/number-words.ts';
 
 export interface ContractQueryParams {

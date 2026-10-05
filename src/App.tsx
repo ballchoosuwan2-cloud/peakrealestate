@@ -85,45 +85,72 @@ export default function App() {
         setIsAuthChecking(false);
         return;
       }
+
+      // If token is an offline fallback token, keep active session
+      if (token.startsWith('peak_offline_')) {
+        setIsAuthenticated(true);
+        setAuthToken(token);
+        setIsAuthChecking(false);
+        return;
+      }
+
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+
         const res = await fetch('/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
+
         if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.user) {
-            setIsAuthenticated(true);
-            setAuthToken(token);
-            setCurrentUserId(data.user.id);
-            setDb((prev) => ({
-              ...prev,
-              currentUser: {
-                id: data.user.id,
-                name: data.user.name,
-                email: data.user.email,
-                username: data.user.username,
-                role: data.user.role === 'Admin' ? 'Administrator' : data.user.role,
-                branch: data.user.branch || 'Headquarters (Phuket)',
-                phone: data.user.phone || '',
-                avatar: data.user.avatar || '',
-                title: data.user.title || data.user.role,
-                monthlyTarget: Number(data.user.monthlyTarget) || 20000000,
-                monthlyCommission: Number(data.user.monthlyCommission) || 500000,
-                targetDeals: data.user.targetDeals || 5,
-                completedDeals: data.user.completedDeals || 0,
-                status: data.user.status || 'Active',
-                isActive: data.user.isActive !== false,
-                permissions: data.user.permissions || ['View', 'Create', 'Edit'],
-              },
-            }));
-          } else {
-            setIsAuthenticated(false);
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const data = await res.json();
+            if (data.success && data.user) {
+              setIsAuthenticated(true);
+              setAuthToken(token);
+              setCurrentUserId(data.user.id);
+              setDb((prev) => ({
+                ...prev,
+                currentUser: {
+                  id: data.user.id,
+                  name: data.user.name,
+                  email: data.user.email,
+                  username: data.user.username,
+                  role: data.user.role === 'Admin' ? 'Administrator' : data.user.role,
+                  branch: data.user.branch || 'Headquarters (Phuket)',
+                  phone: data.user.phone || '',
+                  avatar: data.user.avatar || '',
+                  title: data.user.title || data.user.role,
+                  monthlyTarget: Number(data.user.monthlyTarget) || 20000000,
+                  monthlyCommission: Number(data.user.monthlyCommission) || 500000,
+                  targetDeals: data.user.targetDeals || 5,
+                  completedDeals: data.user.completedDeals || 0,
+                  status: data.user.status || 'Active',
+                  isActive: data.user.isActive !== false,
+                  permissions: data.user.permissions || ['View', 'Create', 'Edit'],
+                },
+              }));
+              return;
+            }
           }
-        } else {
+        } else if (res.status === 401) {
+          // Token is genuinely expired or rejected by server
+          localStorage.removeItem('peak_auth_token');
+          sessionStorage.removeItem('peak_auth_token');
           setIsAuthenticated(false);
+          return;
         }
+
+        // Non-401 (e.g. 503 Service Unavailable or wake-up): preserve existing local session
+        setIsAuthenticated(true);
+        setAuthToken(token);
       } catch {
-        setIsAuthenticated(false);
+        // Network timeout / offline: preserve session for offline PWA & web app resilience
+        setIsAuthenticated(true);
+        setAuthToken(token);
       } finally {
         setIsAuthChecking(false);
       }

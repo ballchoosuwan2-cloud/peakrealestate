@@ -5,10 +5,10 @@ import {
   propertiesTable,
   usersTable,
   auditLogsTable,
-  DbViewing,
-  InsertDbViewing,
+  type DbViewing,
+  type InsertDbViewing,
 } from '../db/schema.ts';
-import { User } from '../types.ts';
+import type { User } from '../types.ts';
 
 export interface ViewingQueryParams {
   agentId?: string;

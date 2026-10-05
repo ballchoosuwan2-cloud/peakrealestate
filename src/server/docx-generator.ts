@@ -16,7 +16,7 @@ import {
 } from 'docx';
 import fs from 'fs';
 import path from 'path';
-import { DbContract } from '../db/schema.ts';
+import type { DbContract } from '../db/schema.ts';
 import { numberToThaiBaht, numberToEnglishWords } from '../lib/number-words.ts';
 
 // Contracts generated documents directory

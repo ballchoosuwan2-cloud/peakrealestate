@@ -4,8 +4,8 @@ import {
   usersTable,
   propertiesTable,
   auditLogsTable,
-  DbUser,
-  InsertDbUser,
+  type DbUser,
+  type InsertDbUser,
 } from '../db/schema.ts';
 import { hashPassword, DEFAULT_INITIAL_PASSWORD } from './auth-service.ts';
 
